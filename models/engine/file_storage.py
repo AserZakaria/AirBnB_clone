@@ -11,39 +11,42 @@ from models.review import Review
 
 
 class FileStorage:
-    """Represent an abstracted storage engine.
+    """Abstracted storage engine for managing objects.
 
     Attributes:
-        __file_path (str): The name of the file to save objects to.
+        __file_path (str): The path to the JSON file for saving objects.
         __objects (dict): A dictionary of instantiated objects.
     """
-    __file_path = "file.json"
-    __objects = {}
+
+    def __init__(self):
+        """Initialize FileStorage."""
+        self.__file_path = "file.json"
+        self.__objects = {}
 
     def all(self):
-        """Return the dictionary __objects."""
-        return FileStorage.__objects
-
-    def new(self, obj):
-        """Set in __objects obj with key <obj_class_name>.id"""
-        ocname = obj.__class__.__name__
-        FileStorage.__objects["{}.{}".format(ocname, obj.id)] = obj
+        """Return the dictionary of objects."""
+        return self.__objects
 
     def save(self):
-        """Serialize __objects to the JSON file __file_path."""
-        odict = FileStorage.__objects
-        objdict = {obj: odict[obj].to_dict() for obj in odict.keys()}
-        with open(FileStorage.__file_path, "w") as f:
-            json.dump(objdict, f)
+        """Serialize __objects to the JSON file."""
+        obj_dict = {key: value.to_dict() for key, value in self.__objects.items()}
+        with open(self.__file_path, "w") as file:
+            json.dump(obj_dict, file)
 
     def reload(self):
-        """Deserialize the JSON file __file_path to __objects, if it exists."""
+        """Deserialize the JSON file to __objects."""
         try:
-            with open(FileStorage.__file_path) as f:
-                objdict = json.load(f)
-                for o in objdict.values():
-                    cls_name = o["__class__"]
-                    del o["__class__"]
-                    self.new(eval(cls_name)(**o))
+            with open(self.__file_path) as file:
+                obj_dict = json.load(file)
+                for key, value in obj_dict.items():
+                    cls_name = value["__class__"]
+                    del value["__class__"]
+                    obj_instance = eval(cls_name)(**value)
+                    self.__objects[key] = obj_instance
         except FileNotFoundError:
-            return
+            pass
+
+    def new(self, obj):
+        """Add a new object to __objects."""
+        key = "{}.{}".format(obj.__class__.__name__, obj.id)
+        self.__objects[key] = obj
